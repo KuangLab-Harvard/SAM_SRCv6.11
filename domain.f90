@@ -6,8 +6,8 @@ module domain
        integer, parameter :: nx_gl = 64 ! Number of grid points in X
        integer, parameter :: ny_gl = 64 ! Number of grid points in Y
        integer, parameter :: nz_gl = 64 ! Number of pressure (scalar) levels
-       integer, parameter :: nsubdomains_x  = 8 ! No of subdomains in x
-       integer, parameter :: nsubdomains_y  = 4 ! No of subdomains in y
+       integer, parameter :: nsubdomains_x  = 2 ! No of subdomains in x
+       integer, parameter :: nsubdomains_y  = 2 ! No of subdomains in y
 
 
        ! define # of points in x and y direction to average for 

@@ -69,7 +69,6 @@ real   gamq0    ! gradient of q() at the top,g/g/m
 ! reference vertical profiles:
  
 real   prespot(nzm)  ! (1000./pres)**R/cp
-real   prespotb(nzm) ! prespot at beginning of run, to convert pottemp to temp in snd files
 real   prespoti(nz)  ! (1000./pres)**R/cp (interfaces)
 real   rho(nzm)	  ! air density at pressure levels,kg/m3 
 real   rhow(nz)   ! air density at vertical velocity levels,kg/m3

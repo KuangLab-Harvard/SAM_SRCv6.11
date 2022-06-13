@@ -48,13 +48,21 @@ if(nrestart.eq.0) then
 elseif(nrestart.eq.1) then
    call read_all()
    call setgrid() ! initialize vertical grid structure
+   ! Kuang Ensemble run: turn off mpi for diagnose (Song Qiyu, 2022)
+   if(dompiensemble) dompi = .false.
    call diagnose()
+   ! Kuang Ensemble run: turn on mpi after diagnose (Song Qiyu, 2022)
+   if(dompiensemble) dompi = .true.
    call sgs_init()
    call micro_init()  !initialize microphysics
 elseif(nrestart.eq.2) then  ! branch run
    call read_all()
    call setgrid() ! initialize vertical grid structure
+   ! Kuang Ensemble run: turn off mpi for diagnose (Song Qiyu, 2022)
+   if(dompiensemble) dompi = .false.
    call diagnose()
+   ! Kuang Ensemble run: turn on mpi after diagnose (Song Qiyu, 2022)
+   if(dompiensemble) dompi = .true.
    call setparm() ! overwrite the parameters
    call sgs_init()
    call micro_init()  !initialize microphysics

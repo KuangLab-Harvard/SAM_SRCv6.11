@@ -1,4 +1,3 @@
-
 subroutine forcing
 	
 use vars
@@ -13,7 +12,7 @@ integer i,j,k,n,nn,m,iz,iday0,iday
 real coef, radtend, dayy
 real tt(nzm,2),qq(nzm,2),uu(nzm,2),vv(nzm,2),ww(nzm,2),pp
 real ratio1, ratio2, ratio_t1, ratio_t2
-logical zgrid, pgrid
+logical zgrid
 
 ! linear response perturbation (Song Qiyu, 2022)
 real, save :: delt_t, delt_q    ! Layer by layer perturbation
@@ -46,14 +45,13 @@ end do
 do n=1,2
 
    m = nn+n-1
-   zgrid = .false.
-   pgrid = .false.
-   if(zsnd(2,m).gt.zsnd(1,m)) zgrid=.true.
-   if(psnd(2,m).lt.psnd(1,m)) pgrid=.true.
-
-   if((.not.zgrid).and.(.not.pgrid)) then
-      if(masterproc) print*,'error in grid in snd'
-      stop
+   if(zsnd(2,m).gt.zsnd(1,m)) then
+     zgrid=.true.
+   else if(psnd(2,m).lt.psnd(1,m)) then
+     zgrid=.false.
+   else
+     if(masterproc) print*,'error in grid in snd'
+     stop
    end if
 
    do iz = 1,nzm
@@ -62,12 +60,7 @@ do n=1,2
          if(z(iz).le.zsnd(i,m)) then
             coef = (z(iz)-zsnd(i-1,m))/(zsnd(i,m)-zsnd(i-1,m)) 
             tt(iz,n)=tsnd(i-1,m)+(tsnd(i,m)-tsnd(i-1,m))*coef
-            if(pgrid) then
-               pp=psnd(i-1,m)+(psnd(i,m)-psnd(i-1,m))*coef
-               tt(iz,n)=tt(iz,n)/((1000./pp)**(rgas/cp))
-            else
-               tt(iz,n)=tt(iz,n)/prespotb(iz)
-            endif
+            tt(iz,n)=tt(iz,n)/prespot(iz)
             qq(iz,n)=qsnd(i-1,m)+(qsnd(i,m)-qsnd(i-1,m))*coef
             uu(iz,n)=usnd(i-1,m)+(usnd(i,m)-usnd(i-1,m))*coef
             vv(iz,n)=vsnd(i-1,m)+(vsnd(i,m)-vsnd(i-1,m))*coef
@@ -79,7 +72,7 @@ do n=1,2
          if(pres(iz).ge.psnd(i,m)) then
             coef = (pres(iz)-psnd(i-1,m))/(psnd(i,m)-psnd(i-1,m))
             tt(iz,n)=tsnd(i-1,m)+(tsnd(i,m)-tsnd(i-1,m))*coef
-            tt(iz,n)=tt(iz,n)/prespotb(iz)
+            tt(iz,n)=tt(iz,n)/prespot(iz)
             qq(iz,n)=qsnd(i-1,m)+(qsnd(i,m)-qsnd(i-1,m))*coef
             uu(iz,n)=usnd(i-1,m)+(usnd(i,m)-usnd(i-1,m))*coef
             vv(iz,n)=vsnd(i-1,m)+(vsnd(i,m)-vsnd(i-1,m))*coef

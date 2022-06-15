@@ -128,6 +128,8 @@ do while(.true.)
       qq(i)=qq(i)+(qq1(i)-qq(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
       uu(i)=uu(i)+(uu1(i)-uu(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
       vv(i)=vv(i)+(vv1(i)-vv(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
+      tt(i)=tt(i)+tpert0(i)
+      qq(i)=qq(i)+qpert0(i) 
       end do
     else if(pp(2).lt.pp(1)) then
       zgrid = .false.
@@ -137,6 +139,8 @@ do while(.true.)
       qq(i)=qq(i)+(qq1(i)-qq(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
       uu(i)=uu(i)+(uu1(i)-uu(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
       vv(i)=vv(i)+(vv1(i)-vv(i))/(rrr2-rrr1+1.e-5)*(day-rrr1)
+      tt(i)=tt(i)+tpert0(i)
+      qq(i)=qq(i)+qpert0(i) 
       ta(i)=tt(i)*(pp(i)/1000.)**(rgas/cp)
       end do
     else  
@@ -217,7 +221,7 @@ do k= 1,nzm
  pres(k) = exp(log(presi(k))+log(presi(k+1)/presi(k))* &
                              (z(k)-zi(k))/(zi(k+1)-zi(k)))
  prespot(k)=(1000./pres(k))**(rgas/cp)
- tabs0(k)=(t0(k)+tpert0(k))/prespot(k)
+ tabs0(k)=t0(k)/prespot(k)
 13 continue
  ug0(k)=u0(k)
  vg0(k)=v0(k)
@@ -236,7 +240,7 @@ do k=1,nzm
 
   gamaz(k)=ggr/cp*z(k)
   t0(k) = tabs0(k)+gamaz(k) 
-  qv0(k) = q0(k)+qpert0(k)
+  qv0(k) = q0(k)
   qc0(k) = 0.
   qi0(k) = 0.
   qn0(k) = 0.
@@ -250,8 +254,6 @@ do k=1,nzm
   v0(k) = v0(k) - vg
   ug0(k) = ug0(k) - ug
   vg0(k) = vg0(k) - vg
-
-  prespotb(k) = prespot(k)
 
 end do
 

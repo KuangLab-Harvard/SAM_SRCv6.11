@@ -112,7 +112,7 @@ subroutine sgs_setparm()
   close(55)
    ! write namelist values out to file for documentation
    if(masterproc) then
-      open(unit=55,file='./'//trim(case)//'/'//trim(case)//'_'//trim(caseid)//'.nml', form='formatted', position='append')
+      open(unit=55,file='./OUT_STAT/'//trim(case)//'_'//trim(caseid)//'.nml', form='formatted', position='append')
       write (unit=55,nml=SGS_TKE,IOSTAT=ios)
       write(55,*) ' '
       close(unit=55)

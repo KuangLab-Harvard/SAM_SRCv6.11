@@ -199,6 +199,29 @@ real, dimension(nzm) :: rhowcl, rhowmsecl, rhowtlcl, rhowqtcl,  &
 	call hbuf_put('TTEND',ttend,86400.)
 	call hbuf_put('QTEND',qtend,86400.*1.e3)
 
+! randmultisine: output perturbations (Qiyu, 2022)
+        !print*, 'In statistics.f90, ttend_random(1) = ', ttend_random(1), ', step, rank = ',nstep, rank
+        call hbuf_put('TTENDR',ttend_random,1.)
+        call hbuf_put('QTENDR',qtend_random,1.e3)
+
+! wave statistics output (Qiyu, 2024)
+        !print*, 'In statistics.f90, t_wavebg(1) = ', t_wavebg(1), ', step, rank = ',nstep, rank
+        call hbuf_put('T_BC',bc_tabs0,1.)
+        call hbuf_put('Q_BC',bc_qv0,1.e3)
+        call hbuf_put('W_WAVE',w_wave,1.)
+        call hbuf_put('Q_WAVE',q_wave,1.e3)
+        call hbuf_put('T_WAVE',t_wave,1.)
+        call hbuf_put('Q_WAVEBG',q_wavebg,1.e3)
+        call hbuf_put('T_WAVEBG',t_wavebg,1.)
+        call hbuf_put('R_WAVEBG',rad_wavebg,86400.)
+        call hbuf_put('TTENDWV',ttend_wave,86400.)
+        call hbuf_put('QTENDWV',qtend_wave,86400.*1.e3)
+        !call hbuf_put('TTENDC',dtdt_conv,1.)
+        !call hbuf_put('QTENDC',dqdt_conv,1.)
+        call hbuf_put('QFILL',water_fill,1.e3)
+
+! ===========================
+
 	call hbuf_put('DSE',dse,factor_xy)
 	call hbuf_put('MSE',mse,factor_xy)
 	call hbuf_put('SSE',sse,factor_xy)

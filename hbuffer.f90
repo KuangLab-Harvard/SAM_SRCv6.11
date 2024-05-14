@@ -15,6 +15,9 @@ implicit none
 	integer status(HBUF_MAX_LENGTH)
 	integer average_type(HBUF_MAX_LENGTH)
 
+integer,save:: statfileindex
+character *4,save:: timechar
+
 CONTAINS
 
 !------------------------------------------------------------
@@ -252,10 +255,14 @@ if(masterproc) then
   if(nrestart.eq.0.or.nrestart.eq.2) then
     filestatus='new'
   end if
+  
+  ! write stat to different files to avoid large file (Qiyu 2024)
+  statfileindex=0
+  write(timechar,'(i4)') statfileindex
 
   open (55,file='./OUT_STAT/'// &
                   case(1:lenstr(case))//'_'// &
-                  caseid(1:lenstr(caseid))//'.stat', &
+                  caseid(1:lenstr(caseid))//timechar(5-lenstr(timechar):4)//'.stat', &
                   status=filestatus,form='unformatted')
   close(55)
 
@@ -539,11 +546,15 @@ if(dompiensemble) dompi = .false.
 
 if(masterproc) then
 
+!write to multiple stat files to avoid having to go through a long file to find the end (Qiyu, 2024)
+  statfileindex=(nstep-1)/nstep_separate_statfile
+  write(timechar,'(i4)') statfileindex
+
   open (ntape,file='./OUT_STAT/'// &
                   case(1:lenstr(case))//'_'// &
-                  caseid(1:lenstr(caseid))//'.stat', &
+                  caseid(1:lenstr(caseid))//timechar(5-lenstr(timechar):4)//'.stat', &
                   status='unknown',form='unformatted')
-  if(nstep.ne.nstat) then
+  if(nstep.ne.statfileindex*nstep_separate_statfile+nstat) then
     do while(.true.)
       read(ntape, end=222) 
       read(ntape)  dummy,dummy,nsteplast

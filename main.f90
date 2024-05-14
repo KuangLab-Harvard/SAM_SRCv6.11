@@ -14,6 +14,9 @@ implicit none
 integer k, icyc, nn, nstatsteps
 double precision cputime, oldtime, init_time, elapsed_time !bloss wallclocktime
 double precision usrtime, systime
+
+integer,dimension(1)::seed=(/3/)
+
 !-------------------------------------------------------------------
 ! determine the rank of the current task and of the neighbour's ranks
 
@@ -38,6 +41,10 @@ if(masterproc) call header()
 call init()     ! initialize some statistics arrays
 call setparm()	! set all parameters and constants
 
+if(doparameterizedwave) call init_linear_wave()  !initialize the parameterized wave component
+
+firststep = .true.
+
 !------------------------------------------------------------------
 ! Initialize or restart from the save-dataset:
 
@@ -55,6 +62,10 @@ elseif(nrestart.eq.1) then
    if(dompiensemble) dompi = .true.
    call sgs_init()
    call micro_init()  !initialize microphysics
+   if(dorandmultisine) then
+      call random_seed(put=seed) !reset the random number generator
+      call ranset_(10000) !run the random number generator for this many times (same across processors) to initialize
+   end if
 elseif(nrestart.eq.2) then  ! branch run
    call read_all()
    call setgrid() ! initialize vertical grid structure
@@ -68,10 +79,19 @@ elseif(nrestart.eq.2) then  ! branch run
    call micro_init()  !initialize microphysics
    nstep = 0
    day0 = day
+   if(dorandmultisine) then
+      call random_seed(put=seed+iensemble) !reset the random number generator
+      call ranset_(10000) !run the random number generator for this many times (same across processors) to initialize
+   end if
 else
    print *,'Error: confused by value of NRESTART'
    call task_abort() 
 endif
+
+!if(dorandmultisine) then
+!   call random_seed(put=seed+iensemble) !reset the random number generator
+!   call ranset_(1000*(iensemble+1)) !run the random number generator for this many times (same across processors) to initialize
+!end if
 
 call init_movies()
 call stat_2Dinit(1) ! argument of 1 means storage terms in stats are reset
@@ -97,7 +117,27 @@ call t_stopf ('initialize')
 !------------------------------------------------------------------
 
 do while(nstep.lt.nstop.and.nelapse.gt.0) 
-        
+ 
+  ! Kuang Ensemble run: turn off mpi entering each loop (Song Qiyu, 2022)
+  if(dompiensemble) dompi = .false.
+  
+  if(firststep.and.dorandmultisine) then
+    call random_seed(put=seed+iensemble)
+    call ranset_(10000)
+    !print*, 'seed, rank = ', seed, rank
+    call setrandmultisinephases()
+    !if(nrestart.eq.1) then
+    !  !perturb the initial profile, as should be done at the end of the
+    !  !previous run
+    !  call setrandmultisine()
+    !  do iperturb1=1,nT+nQ
+    !    call perturbtq()
+    !  end do
+    !  iperturb1=0
+    !end if
+    firststep = .false.
+  end if
+       
   nstep = nstep + 1
   time = time + dt
   day = day0 + nstep*dt/86400.
@@ -108,9 +148,6 @@ do while(nstep.lt.nstop.and.nelapse.gt.0)
 !------------------------------------------------------------------
 
   ncycle = 1
-  
-  ! Kuang Ensemble run: turn off mpi entering each loop (Song Qiyu, 2022)
-  if(dompiensemble) dompi = .false.
   
   call kurant()
 
@@ -272,6 +309,13 @@ do while(nstep.lt.nstop.and.nelapse.gt.0)
       call diagnose()
 
 !----------------------------------------------------------
+!    Parameterized large-scale wave dynamics (Qiyu, 2024)
+      if(doparameterizedwave.and.icycle.eq.ncycle) then
+         call linear_wave()
+         call wavesubsidence()
+      end if
+ 
+!----------------------------------------------------------
 
 ! Rotate the dynamic tendency arrays for Adams-bashforth scheme:
 
@@ -279,15 +323,42 @@ do while(nstep.lt.nstop.and.nelapse.gt.0)
       na=nc
       nc=nb
       nb=nn
-
-   end do ! icycle	
-          
-  total_water_after = total_water()
-!----------------------------------------------------------
-!  collect statistics, write save-file, etc.
-   
-   call stepout(nstatsteps)
       
+      if(firststep) then
+!        ! randmultisine: initialize parameters (Qiyu, 2022)
+!        if(dorandmultisine) then
+!          if(dorandmultisineoddonly) then
+!             call setrandmultisineoddonly()
+!          else
+!             call setrandmultisine()
+!          end if
+!        end if
+         firststep = .false. ! no longer first step of run
+      end if
+   end do ! icycle	
+   
+   total_water_after = total_water()
+!----------------------------------------------------------
+
+   ! randmultisine: uses the random number sequence to compute the forcing
+   ! (Qiyu, 2022)
+   if(dorandmultisine) then
+     ! Inside each of the two subroutine, ttend_random and qtend_random are
+     ! only updated every nsteppurturb steps
+        call setrandmultisine()
+   end if
+!  collect statistics, write save-file, etc.
+
+   call stepout(nstatsteps)
+ 
+   ! randmultisine: add perturbation to fields
+   if(dorandmultisine) then
+      do iperturb1=1,nT+nQ
+         call perturbtq()
+      end do
+      iperturb1=0
+   end if
+ 
    ! Kuang Ensemble run: turn on mpi after each loop (Song Qiyu, 2022)
    if(dompiensemble) dompi = .true.
   

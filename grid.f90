@@ -169,4 +169,28 @@ logical :: isInitialized_scamiopdata = .false.
 logical :: wgls_holds_omega = .false.
 
 !-----------------------------------------
+! randmultisine: restore tendencies (Qiyu, 2022)
+integer:: iensemble = 0
+integer lenP, freqfactor
+real, allocatable :: randcoef(:,:)
+real ttend_random(nzm), qtend_random(nzm)
+
+! output stat to separate files every ? steps (Qiyu, 2024)
+integer:: nstep_separate_statfile=99999999
+
+! parameterized wave (Qiyu, 2024)
+!logical doparameterizedwave
+!real wavenumber_factor
+!integer nstartlinearwave,nsteplinearwavebg,nsteplinearwave
+!real wavedampingtime,wavetqdampingtime
+real tv_wavebg(nzm),t_wavebg(nzm),q_wavebg(nzm),rad_wavebg(nz)
+real*8 t_wavebg_dble(nzm),q_wavebg_dble(nzm),rad_wavebg_dble(nz)
+
+real tv_wave(nzm),t_wave(nzm),q_wave(nzm),w_wave(nzm)
+real ttend_wave(nzm),qtend_wave(nzm)
+real t_wave_local(nzm),q_wave_local(nzm)
+!logical doadvectbg
+real bc_tabs0(nzm),bc_qv0(nzm),bc_tabs0_local(nzm),bc_qv0_local(nzm), water_fill(nzm)
+
+
 end module grid

@@ -18,6 +18,8 @@ real buffers(max(nx,ny),2)
 logical flag(2)
 real, external :: qsatw,qsati
 
+real delt,ssq,delq,cd,windspeed,wrk
+
 call t_startf ('surface')
 
 
@@ -55,7 +57,24 @@ if(.not.SFC_FLX_FXD) then
 
          end do
        end do
-
+      
+       !bulk sfc fluxes, only apply to latent and sensible heat
+       if(dobulksfc) then
+          do j=1,ny
+             do i=1,nx
+                cd=1.1e-3
+                windspeed=5.
+                delt   = t(i,j,1)-gamaz(1) - (sstxy(i,j)+t00)
+                ssq = qsatw(sstxy(i,j)+t00,presi(1))
+                delq   = qv(i,j,1)  - ssq
+                wrk=(log(10/1.e-4)/log(z(1)/1.e-4))**2
+                fluxbt(i,j) = -cd*windspeed*delt*wrk
+                fluxbq(i,j) = -cd*windspeed*delq*wrk
+                !fluxbu(i,j) = -rho(1)*(u(i,j,1)+ug)*cd*windspeed*wrk
+                !fluxbv(i,j) = -rho(1)*(v(i,j,1)+vg)*cd*windspeed*wrk
+            end do
+          end do
+       end if
 	
   end if ! OCEAN
 

@@ -146,5 +146,42 @@ integer:: qperturbi = 0
 real:: tperturbA = 1.     ! Default perturbation 1 time positive
 real:: qperturbA = 1.
 
+! randmultisine: parameters (Qiyu, 2022)
+integer:: iperturb1 = 0
+integer:: iperturbt = 0
+integer:: iperturbq = 0
+real:: delt_perturbt = 1.
+real:: delt_perturbq = 1.
+integer:: nstartperturb = 0
+integer:: nperturbstep = 45!should be same as nstat?
+logical:: dorandmultisine = .false.
+logical:: dorandmultisineoddonly = .false.
+logical:: douniformintime = .true.
+logical:: dowhitenoiseforcing = .false.
+integer:: nT = 0
+integer:: nQ = 0
+real:: maxperturbperiod = 200 * 86400.!sec
+logical:: firststep = .false.
+
+logical:: increase_delt = .false.
+integer:: nstep_increase_start = 99999999
+integer:: nstep_increase_end = 99999999
+real:: delt_perturbt_end = 1.
+real:: delt_perturbq_end = 1.
+
+logical:: doidealizedrad = .false.
+logical:: dobulksfc = .false.
+integer:: icopy = 0 ! for initial perturbation
+
+! parameterized wave
+logical:: doparameterizedwave = .false.
+logical:: doadvectbg = .true.
+logical:: dointernalnoise = .false.
+real:: wavenumber_factor = 1.
+integer:: nstartlinearwave = 99999999
+integer:: nsteplinearwavebg = 99999999
+integer:: nsteplinearwave = 99999999
+real:: wavedampingtime = 1.
+real:: wavetqdampingtime = 1.
 
 end module params

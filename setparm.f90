@@ -47,7 +47,19 @@ NAMELIST /PARAMETERS/ dodamping, doupperbound, docloud, doprecip, &
 
 ! Parameters added by Kuang Lab at Harvard
 NAMELIST /KUANG_PARAMS/ dompiensemble, &
-                dolayerperturb, tperturbi, qperturbi, tperturbA, qperturbA ! linear response perturbation: layer by layer (Song Qiyu, 2022)
+                dolayerperturb, tperturbi, qperturbi, tperturbA, qperturbA, & ! linear response perturbation: layer by layer (Song Qiyu, 2022)
+                nstartperturb, nperturbstep, dorandmultisine, &
+                dorandmultisineoddonly, douniformintime, dowhitenoiseforcing, &
+                delt_perturbt, delt_perturbq, &
+                increase_delt, nstep_increase_start, nstep_increase_end, &
+                delt_perturbt_end, delt_perturbq_end, &
+                iensemble, nT, nQ, maxperturbperiod, & ! perturbation signal: randmultisine (Qiyu, 2022)
+                doidealizedrad, dobulksfc, icopy, &
+                nstep_separate_statfile, &
+                wavenumber_factor,nstartlinearwave,nsteplinearwavebg,nsteplinearwave,&
+                wavedampingtime,wavetqdampingtime,&
+                doadvectbg,doparameterizedwave,dointernalnoise
+                
 
 !bloss: Create dummy namelist, so that we can figure out error code
 !       for a mising namelist.  This lets us differentiate between
@@ -201,6 +213,47 @@ end if
           end if
         end if
         
+        if(dorandmultisine) then
+          if((nT.le.0).or.(nQ.le.0).or.(nT.gt.nzm).or.(nQ.gt.nzm)) then
+            print*,'Check nT and nQ in randmultisine!'
+            call task_abort()
+          end if
+          if(masterproc) then
+            write(*,*) '*********************************************************'
+            write(*,*) '  Using Random Phase Multi-Sine perturbations as input'
+            write(*,*) '  signal of the system. These perturbations are added to'
+            write(*,*) '  field every nstat steps, while statistic field is'
+            write(*,*) '  written in output at the same steps.'
+            if(dorandmultisineoddonly) then
+              write(*,*) '  - Only odd frequency perturbations are included.'
+            else
+              write(*,*) '  - All frequency perturbations are included.'
+            end if
+            if(increase_delt) then
+              write(*,*) '  - delt_t/q are: ', delt_perturbt, delt_perturbq
+              write(*,*) '  - before step number: ', nstep_increase_start
+              write(*,*) '  - then linearly increase to:', delt_perturbt_end, delt_perturbq_end
+              write(*,*) '  - by step number: ', nstep_increase_end
+              write(*,*) '  - then stay constant.'
+            else
+              write(*,*) '  - delt_t/q are: ', delt_perturbt, delt_perturbq
+            end if
+            write(*,*) '*********************************************************'
+          end if
+        end if
+
+        if(doidealizedrad) then
+          if(masterproc) then
+            write(*,*) '  Doing idealized radiation.'
+            if(dolongwave.or.doshortwave.or.doradforcing) then
+              dolongwave = .false.
+              doshortwave = .false.
+              doradforcing = .false.
+              write(*,*) '  Setting dolongwave, doshortwave, doradforcing as false.'
+            end if
+          end if
+        end if
+
         !===============================================================
         ! UW ADDITION
 

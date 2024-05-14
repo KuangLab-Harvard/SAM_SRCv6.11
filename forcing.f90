@@ -284,6 +284,24 @@ if(doradforcing.and.time.gt.timelargescale) then
 
 endif
 
+!below uses radiation in Wang and Sobel
+if(doidealizedrad) then
+   do k=1,nzm
+      if(tabs0(k).gt.207.5) then
+         radtend=-1.5/86400.
+      else
+         radtend=(200.-tabs0(k))/(5*86400.) !5 day nudging to 200K
+      end if
+      radqrlw(k)=radtend*float(nx*ny)
+      radqrsw(k)=0.
+      do j=1,ny
+         do i=1,nx
+            t(i,j,k)=t(i,j,k)+radtend*dtn
+         end do
+      end do
+   end do
+end if
+
 
 !----------------------------------------------------------------------------
 ! Surface flux forcing:

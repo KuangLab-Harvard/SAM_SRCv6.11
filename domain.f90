@@ -3,12 +3,11 @@
 module domain
 
        integer, parameter :: YES3D = 1  ! Domain dimensionality: 1 - 3D, 0 - 2D
-       integer, parameter :: nx_gl = 64 ! Number of grid points in X
-       integer, parameter :: ny_gl = 64 ! Number of grid points in Y
-       integer, parameter :: nz_gl = 64 ! Number of pressure (scalar) levels
-       integer, parameter :: nsubdomains_x  = 2 ! No of subdomains in x
-       integer, parameter :: nsubdomains_y  = 2 ! No of subdomains in y
-
+       integer, parameter :: nx_gl = 512 ! Number of grid points in X
+       integer, parameter :: ny_gl = 512 ! Number of grid points in Y
+       integer, parameter :: nz_gl = 28 ! Number of pressure (scalar) levels
+       integer, parameter :: nsubdomains_x  = 16 ! No of subdomains in x
+       integer, parameter :: nsubdomains_y  = 16 ! No of subdomains in y
 
        ! define # of points in x and y direction to average for 
        !   output relating to statistical moments.

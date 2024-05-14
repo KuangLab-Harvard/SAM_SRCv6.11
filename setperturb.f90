@@ -25,7 +25,7 @@ logical :: do_decomp_independent_perturb = .false.
 real rrr_loc(nx,ny,nzm)
 real, allocatable, dimension(:,:,:) :: rrr_gl
 
-call ranset_(3*rank)
+call ranset_(3*rank+icopy*10000)
 
 ptype = perturb_type
 

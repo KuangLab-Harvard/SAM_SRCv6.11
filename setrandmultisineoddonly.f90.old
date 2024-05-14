@@ -1,0 +1,76 @@
+subroutine setrandmultisineoddonly
+  !compute the random phases for the random phase multisine at 1st step
+  !then compute the step perturbation to field every nperturbstep steps
+  !output at the same timestep, but show effect starting next output
+  use vars
+  use params
+  use microphysics, only: micro_field, index_water_vapor
+
+  implicit none
+  integer i,j,k,lenP
+  real ranf_,pii,factor
+  real,allocatable,save:: randcoef(:, :)
+
+  lenP = floor(maxperturbperiod/(dt*nstat)+1.e-5)
+  
+  !-----note-----------------------------------------------------------------
+  !unnormalized ttend_random and qtend_random are in K or kg/kg per 900s
+  !not per day,
+  !then transform into step perturbation (every nperturbstep steps)
+  !--------------------------------------------------------------------------
+  
+  pii = atan2(0.d0,-1.d0)
+  
+  ! lenP represents the max period length in term of time chunks of nperturbstep steps
+  !lenP=floor(200.*86400./(dt*nperturbstep)+1.e-5)
+
+  !set the random number at the start. Then reuse them every fixed period
+  if(firststep) then
+    allocate(randcoef(nT+nQ, lenP/4))
+    !4800 non-zero odd frequencies or 200 days
+     do j=1,nT+nQ
+        do k=1,lenP/4
+           randcoef(j,k)=ranf_()
+        end do
+     end do
+     print*,'randcoef(1,1) = ', randcoef(1,1), ', step, rank = ', nstep, rank
+  else
+    !update the forcing every nperturbstep time steps
+    if(nstep.gt.nstartperturb.and.mod(nstep-nstartperturb,nperturbstep).eq.0) then
+       !index for the nperturbstep*dt chunks
+       !we update the forcing at the end of timesteps so the forcing for the very first chunk of the first period is zero.
+       !But since the first period is spin up, this is okay. The subsequent periods don't have this problem.
+       i=(nstep-nstartperturb)/nperturbstep
+       i=mod(i,lenP) !reuse the same set of random numbers after 200 days
+       ttend_random=0.
+       qtend_random=0.
+       !include odd frequency forcings only
+       do k=1,lenP/4
+          !this is to reduce ampltude of lower frequencies by this factor:
+          !new formula: 3.5-1.25*max(log10(1.5*freq),0)
+          if(dowhitenoiseforcing) then
+             factor=3.5D0
+          else
+             factor=max(1.D0,3.5-1.25*max(log10(1.5D0*real(k)/200.D0),0.D0))
+          end if
+          do j=1,nT
+             ttend_random(j)=ttend_random(j)+cos(((2*k-1)*real(i)/real(lenP)+randcoef(j,k))*2.*pii)/factor
+          end do
+          do j=1,nQ
+             qtend_random(j)=qtend_random(j)+cos(((2*k-1)*real(i)/real(lenP)+randcoef(j+nT,k))*2.*pii)/factor
+          end do
+       end do
+
+       !transform into step perturbation (every nperturbstep steps)
+       !"unitary" change is 0.01K or qg0/960.kg/kg (in 900s)
+       !sqrt(nperturbstep*dt/900.): normalized by 900 seconds
+       !delt_perturbt: determine sign (+1 or -1), seems useless
+       !1/sqrt(real(lenP)/4.): keep variance same as a single sine signal
+       ttend_random=ttend_random*0.01*sqrt(nperturbstep*dt/900.)*delt_perturbt/sqrt(real(lenP)/4.)
+       do j=1,nQ
+          qtend_random(j)=qtend_random(j)*qg0(j)/960.*sqrt(nperturbstep*dt/900.)*delt_perturbq/sqrt(real(lenP)/4.)
+       end do
+    end if
+  end if
+
+end subroutine setrandmultisineoddonly

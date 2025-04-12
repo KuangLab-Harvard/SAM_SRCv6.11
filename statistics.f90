@@ -224,6 +224,9 @@ real, dimension(nzm) :: rhowcl, rhowmsecl, rhowtlcl, rhowqtcl,  &
 	! Add bias outputs to statistics as per Blossey version of SAM
 	call hbuf_put('TBIAS',tabs0-tg0,1.)
 	call hbuf_put('QBIAS',factor_xy*(qvz+qcz)-qg0,1.e3)
+        ! Add profiles before forcing
+        call hbuf_put('T_WTG',t_wtg,1.)
+        call hbuf_put('QV_WTG',q_wtg,1.e3)
 
 !-------------------------------------------------------------
 !	Fluxes:

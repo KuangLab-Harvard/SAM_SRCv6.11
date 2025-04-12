@@ -22,6 +22,12 @@ real, save :: delt_t, delt_q    ! Layer by layer perturbation
 ! ktrop index for tropopause
 integer :: ktrop
 
+! mpiensemble mean
+real :: coef_subdomain
+real :: buffer(nzm,5), buffer1(nzm,5)
+real :: pres_wtg(nzm)
+real :: prespot_wtg(nzm)
+
 call t_startf ('forcing')
 
 
@@ -234,6 +240,35 @@ if(dolargescale.and.time.gt.timelargescale) then
    ! Save reference copy of large-scale vertical velocity before modification
    ! by WTG or scaling techniques, similar to Blossey's version of SAM
    wsub_ref(1:nzm) = wsub(1:nzm)
+   
+   ! for mpiensemble run, use the ensemble mean profiles to calculate forcing for
+   ! all members
+   if (dompiensemble) then
+      if (icycle.eq.1) then
+         coef_subdomain = 1. / dble(nsubdomains)
+         do k = 1, nzm
+            buffer(k,1) = tabs0(k)
+            buffer(k,2) = qv0(k)
+            buffer(k,3) = qn0(k) + qp0(k)
+            buffer(k,4) = pres(k)
+            buffer(k,5) = prespot(k)
+         end do
+         call task_sum_real8(buffer,buffer1,nzm*5)
+         do k = 1, nzm
+            t_wtg(k) = buffer1(k,1) * coef_subdomain
+            q_wtg(k) = buffer1(k,2) * coef_subdomain
+            qcond_wtg(k) = buffer1(k,3) * coef_subdomain
+            pres_wtg(k) = buffer1(k,4) * coef_subdomain
+            prespot_wtg(k) = buffer1(k,5) * coef_subdomain
+         end do
+      end if
+   else
+      t_wtg = tabs0
+      q_wtg = qv0
+      qcond_wtg = qn0 + qp0
+      pres_wtg = pres
+      prespot_wtg = prespot
+   end if
 
    if(dodgw) then
 
@@ -252,7 +287,7 @@ if(dolargescale.and.time.gt.timelargescale) then
       if (dowtg_blossey_etal_JAMES2009) then
 
          call wtg_james2009(nzm, &
-            100.*pres, tg0, qg0, tabs0, qv0, qn0+qp0, &
+            100.*pres_wtg, tg0, qg0, t_wtg, q_wtg, qcond_wtg, &
             fcor, lambda_wtg, am_wtg_time, am_wtg_exp, o_wtg, ktrop)
          w_wtg(1:nzm) = -o_wtg(1:nzm)/rho(1:nzm)/ggr
 
@@ -260,7 +295,8 @@ if(dolargescale.and.time.gt.timelargescale) then
 
       if (dowtg_kuang_JAS2008) then
 
-         call wtg_jas2008()
+         call wtg_jas2008(nzm, dtn, z, zi, rho, tg0, qg0, t_wtg, &
+            q_wtg, qcond_wtg, lambda_wtg, am_wtg_time, w_wtg, dwwtgdt)
          o_wtg(1:nzm) = -w_wtg(1:nzm)*rho(1:nzm)*ggr
 
       end if
@@ -268,10 +304,10 @@ if(dolargescale.and.time.gt.timelargescale) then
       if (dowtg_decompdgw) then
 
          call wtg_james2009(nzm, &
-            100.*pres, tg0, qg0, tabs0, qv0, qn0+qp0, &
+            100.*pres_wtg, tg0, qg0, t_wtg, q_wtg, qcond_wtg, &
             fcor, lambda_wtg, am_wtg_time, am_wtg_exp, owtgr, ktrop)
          call wtg_decompdgw(masterproc, &
-            nzm, nz, z, 100.*pg0, tg0, qg0, tabs0, qv0, qn0+qp0, &
+            nzm, nz, z, 100.*pg0, tg0, qg0, t_wtg, q_wtg, qcond_wtg, &
             lambda_wtg, am_wtg_time, wtgscale_vertmodenum, wtgscale_vertmodescl, &
             o_wtg, wwtgc, ktrop)
 
@@ -297,17 +333,17 @@ if(dolargescale.and.time.gt.timelargescale) then
       endif
 
       do k = 1,nzm
-         tpm(k) = tabs0(k) * prespot(k)
+         tpm(k) = t_wtg(k) * prespot_wtg(k)
       end do
 
       if (dowtg_raymondzeng_QJRMS2005)   call wtg_qjrms2005(masterproc, nzm, nz, z, &
-                              tp0, tpm, tabs0, tau_wtg_time, dowtgLBL, boundstatic, &
+                              tp0, tpm, t_wtg, tau_wtg_time, dowtgLBL, boundstatic, &
                               dthetadz_min, w_wtg, wwtgr)
       if (dowtg_hermanraymond_JAMES2014) call wtg_james2014(masterproc, nzm, nz, z, &
-                              tp0, tpm, tabs0, tau_wtg_time, dowtgLBL, boundstatic, &
+                              tp0, tpm, t_wtg, tau_wtg_time, dowtgLBL, boundstatic, &
                               dthetadz_min, wtgscale_vertmodepwr, w_wtg, wwtgr, wwtgc)
       if (dowtg_decomptgr)               call wtg_decomptgr(masterproc, nzm, nz, z, &
-                              tp0, tpm, tabs0, tau_wtg_time, &
+                              tp0, tpm, t_wtg, tau_wtg_time, &
                               wtgscale_vertmodenum, wtgscale_vertmodescl, &
                               dowtgLBL, boundstatic, dthetadz_min, w_wtg, wwtgr, wwtgc)
 
@@ -337,7 +373,7 @@ if(dolargescale.and.time.gt.timelargescale) then
       else
          whad = whadmax
       endif
-      call hadley(masterproc, nzm, nz, z, tabs0, whad, zhadmax, whadley)
+      call hadley(masterproc, nzm, nz, z, t_wtg, whad, zhadmax, whadley)
       if(.NOT.dodrivenequilibrium) then
          wsub(1:nzm) = wsub(1:nzm) + whadley(1:nzm)
          dosubsidence = .true.
@@ -398,9 +434,9 @@ if(doradforcing.and.time.gt.timelargescale) then
             end do
          else
             do i = 2,nzrfc
-               if(pres(iz).ge.prfc(i,m)) then
+               if(pres_wtg(iz).ge.prfc(i,m)) then
                   tt(iz,n)=dtrfc(i-1,m)+(dtrfc(i,m)-dtrfc(i-1,m))/(prfc(i,m)-prfc(i-1,m)) &
-                                                                     *(pres(iz)-prfc(i-1,m))
+                                                                 *(pres_wtg(iz)-prfc(i-1,m))
                   goto 13
                endif
             end do

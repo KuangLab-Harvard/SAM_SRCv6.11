@@ -1,18 +1,49 @@
-subroutine wtg_jas2008
+! This subroutine solves for perturbation omega based on WTG approximation as
+! described in equation (6) of Kuang (2008):
+!
+!   http://dx.doi.org/10.1175/2007JAS2399.1
 
-use vars
-use params
+subroutine wtg_jas2008(nzm, dtn, z, zi, rho, tabs_ref, qv_ref, tabs_model, &
+     qv_model, qcond_model, lambda_wtg, am_wtg, w_ls, dwdt_ls)
 
-implicit none
+  use grid, only: icycle, ncycle, nsubdomains
+  use params, only: dowtg_timedependence, dompiensemble, cp, ggr, pi
+  !use vars
+  implicit none
 
+  ! ======= inputs =======
+  integer, intent(in) :: nzm ! number of model levels
+  real, intent(in) :: dtn ! current dynamical time step
+  real, intent(in) :: z(nzm) ! model cell center height
+  real, intent(in) :: zi(nzm+1) ! model interface height
+  real, intent(in) :: rho(nzm) ! model cell center density
+  real, intent(in) :: tabs_ref(nzm) ! reference temperature sounding in K
+  real, intent(in) :: qv_ref(nzm)   ! reference water vapor sounding in kg/kg
+  real, intent(in) :: tabs_model(nzm) ! model temperature sounding in K (domain-mean for LES)
+  real, intent(in) :: qv_model(nzm)   ! model water vapor sounding in kg/kg (domain-mean for LES)
+  real, intent(in) :: qcond_model(nzm) ! model condensate (liq+ice) sounding in kg/kg (domain-mean for LES)
+
+  real, intent(in) :: lambda_wtg ! WTG length scale in m (JAMES2009 value = 650.e6 m)
+
+  ! WTG momentum damping rate
+  real, intent(in) :: am_wtg     ! WTG momentum damping rate in 1/s (default = 1./86400. /s)
+
+  ! ======= input+output =======
+  real, intent(inout) :: w_ls(nzm) ! WTG large-scale vertical velocity in m/s on model levels.
+
+  ! ======= output =======
+  real, intent(out) :: dwdt_ls(nzm) ! WTG large-scale vertical velocity tendency on model levels.
+
+  ! ======= local variables =======
    integer :: k
-   integer :: kk
    integer :: ktrop
    integer :: ktrop1
    real :: ztrop
    real :: ztrop1
    real :: min_temp
    real :: coef, buffer(nzm), buffer1(nzm)
+   real :: tv_lsbg(nzm)
+   real :: tv_wtg(nzm)
 
    if (dowtg_timedependence) then
 
@@ -33,7 +64,7 @@ implicit none
       ! !   of cold point tropopause in the vertical.
       ! ktrop1 = nzm !
       ! do k = nzm,1,-1
-      !    if(w_wtg(k).EQ.0) then
+      !    if(w_ls(k).EQ.0) then
       !       ktrop1 = k
       !    end if
       ! end do
@@ -51,17 +82,17 @@ implicit none
       !    end do
 
       !    do k = 1,nzm
-      !       w_wtg(k) = wwtgi(k)
+      !       w_ls(k) = wwtgi(k)
       !    end do
 
       ! end if
 
       ! ! At tropopause and above, quash any pre-existing vertical velocity from previous timestep to zero.
       ! do k = ktrop,nzm
-      !    w_wtg(k) = 0
+      !    w_ls(k) = 0
       ! end do
 
-      ktrop = nzm-4
+      ktrop = nzm-2
    
    else
 
@@ -69,55 +100,41 @@ implicit none
       ! reverse pressure coordinate, and find index
       !   of cold point tropopause in the vertical.
       ktrop = nzm+1 ! default is top of model/atmosphere (counting from surface)
-      min_temp = tabs0(nzm)
+      min_temp = tabs_model(nzm)
       do k = 1,nzm
-         if(tabs0(k).lt.min_temp) then
+         if(tabs_model(k).lt.min_temp) then
             ktrop = k
-            min_temp = tabs0(k)
+            min_temp = tabs_model(k)
          end if
       end do
 
    end if
 
-   tv_lsbg = tg0   * (1. + 0.61*qg0)
+   tv_lsbg = tabs_ref   * (1. + 0.61*qv_ref)
+   tv_wtg = tabs_model * (1. + 0.61*qv_model - qcond_model)
 
-   if(dompiensemble) then
-      coef = 1. / nsubdomains
-      do k = 1, nzm
-         buffer(k) = tabs0(k) * (1. + 0.61*qv0(k) - qn0(k) - qp0(k))
-      end do
-      call task_sum_real8(buffer,buffer1,nzm)
-      do k = 1, nzm
-         tv_wave(k) = buffer1(k) * coef
-      end do
-   else
-      tv_wave = tabs0 * (1. + 0.61*qv0 - qn0 - qp0)
-   end if
-
-   dwwtgdt = 0.
+   dwdt_ls = 0.
    
-   call calc_wtend(0.5*pi/lambda_wtg, w_wtg(1:ktrop), dwwtgdt(1:ktrop), &
-                     tabs0(1:ktrop), tg0(1:ktrop), tv_wave(1:ktrop), tv_lsbg(1:ktrop), &
+   call calc_wtend(0.5*pi/lambda_wtg, w_ls(1:ktrop), dwdt_ls(1:ktrop), &
+                     tv_wtg(1:ktrop), tv_lsbg(1:ktrop), &
                      rho(1:ktrop), z(1:ktrop), zi(1:ktrop+1), ktrop)
 
    if (dowtg_timedependence) then
 
-      w_wtg(1:nzm) = (w_wtg(1:nzm) + dwwtgdt * dt) / (1. + dt * am_wtg_time)
+      w_ls(1:nzm) = (w_ls(1:nzm) + dwdt_ls * dtn) / (1. + dtn * am_wtg)
 
    else
 
-      w_wtg = 0.
-      w_wtg(1:nzm) = dwwtgdt / am_wtg_time
+      w_ls = 0.
+      w_ls(1:nzm) = dwdt_ls / am_wtg
 
    end if
 
    contains
 
    subroutine calc_wtend(wn, w_curr, wtend, &
-                           ta_curr, tabg_curr, tv_curr, tv_fullbg, &
+                           tv_curr, tv_fullbg, &
                            rho_full, z_full, z_half, nz)
-
-      use params, only: dowtg_timedependence
 
    !     ------------------------------ input arguments ------------------------------
 
@@ -125,8 +142,6 @@ implicit none
 
       real, dimension(nz), intent(in) ::                 &
       w_curr,            &       ! Cell center wave vertical velocity
-      ta_curr,           &       ! Cell center pressure
-      tabg_curr,         &       ! Cell center pressure
       tv_curr,           &       ! Cell center virtual temperature
       tv_fullbg,         &       ! Cell center background virtual temperature
       z_full,            &       ! Cell center height

@@ -28,6 +28,19 @@ subroutine hbuf_conditionals_init(count,trcount)
          'Large-scale Omega induced by weak temperature gradient approx','Pa/s',0)
     call add_to_namelist(count,trcount,'WOBSREF', &
          'Reference Large-scale W Before Modifications by WTG/Scaling','m/s',0)
+    call add_to_namelist(count,trcount,'T_WTG', &
+         'Temperature before wtg forcing','K',0)
+    call add_to_namelist(count,trcount,'QV_WTG', &
+         'Water vapor before wtg forcing','g/kg',0)
+    call add_to_namelist(count,trcount,'QC_WTG', &
+         'Water condensate (qn+qp) before wtg forcing','g/kg',0)
+    ! the followings can be different from the above with doadvensnoise
+    call add_to_namelist(count,trcount,'T_WTG_W', &
+         'Temperature used in wtg calculation','K',0)
+    call add_to_namelist(count,trcount,'QV_WTG_W', &
+         'Water vapor used in wtg calculation','g/kg',0)
+    call add_to_namelist(count,trcount,'QC_WTG_W', &
+         'Water condensate (qn+qp) used in wtg calculation','g/kg',0)
   end if
 
   if(dowtg_raymondzeng_QJRMS2005) then

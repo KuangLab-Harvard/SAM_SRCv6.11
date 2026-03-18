@@ -224,10 +224,10 @@ real    :: zhadmax  = 15000.
 real    :: hadscale_time = 0.
 
 ! Option for whether to advect 1d profile for wtg advection
-logical :: doadv3d = .false. ! this was true in the vanilla SAM
+logical :: doadv3d = .true. ! this was true in the vanilla SAM
 
 ! Options for which 1d profile to advect if advecting 1d
-logical :: doadvinic = .false. ! advect initial profile
+logical :: doadvinic = .true. ! advect initial profile
 logical :: docalcwtgbg = .false. ! even if not doadvbg, may still want to calculate the wtg bg
 logical :: doadvbg = .false. ! advect computed background (time-invariant)
 logical :: doadvensnoise = .false. ! works with dompiensemble, use the large-scale w from one ensemble member
@@ -240,8 +240,8 @@ integer :: nstepwtg = 999999999 ! keep constant wtg forcing in this many steps
 logical :: dowtgtimestep = .false.
 
 ! Options for large-scale vertical advection of temperature/moisture, u/v wind
-logical :: dotqlsvadv = .false.
-logical :: douvlsvadv = .false.
+logical :: dotqlsvadv = .true.
+logical :: douvlsvadv = .true.
 
 ! Kuang-Lab Additions End Here
 !=====================================================

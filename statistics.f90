@@ -224,11 +224,6 @@ real, dimension(nzm) :: rhowcl, rhowmsecl, rhowtlcl, rhowqtcl,  &
 	! Add bias outputs to statistics as per Blossey version of SAM
 	call hbuf_put('TBIAS',tabs0-tg0,1.)
 	call hbuf_put('QBIAS',factor_xy*(qvz+qcz)-qg0,1.e3)
-        ! Add profiles before forcing
-        call hbuf_put('T_WTG',t_wtg,1.)
-        call hbuf_put('QV_WTG',q_wtg,1.e3)
-        call hbuf_put('T_WTG_W', t_wtg_calcw,1.)
-        call hbuf_put('QV_WTG_W', q_wtg_calcw,1.e3)
 
 !-------------------------------------------------------------
 !	Fluxes:
@@ -1235,6 +1230,14 @@ real, dimension(nzm) :: rhowcl, rhowmsecl, rhowtlcl, rhowqtcl,  &
 		call hbuf_put('WWTG',w_wtg,1.)
 		call hbuf_put('OWTG',o_wtg,1.)
 		call hbuf_put('WOBSREF',wsub_ref,1.)
+		! Add profiles before forcing
+        call hbuf_put('T_WTG',t_wtg,1.)
+        call hbuf_put('QV_WTG',q_wtg,1.e3)
+		call hbuf_put('QC_WTG',qcond_wtg,1.e3)
+		! Add profiles for calculating wtg, can be different with doadvensnoise
+        call hbuf_put('T_WTG_W', t_wtg_calcw,1.)
+        call hbuf_put('QV_WTG_W', q_wtg_calcw,1.e3)
+		call hbuf_put('QC_WTG_W', qcond_wtg_calcw,1.e3)
 	end if
 
 	if(dowtg_raymondzeng_QJRMS2005) then

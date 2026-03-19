@@ -311,9 +311,12 @@ end if
               write(*,*) '********************************************************'
               write(*,*) '  Unsupported setup in large-scale vertical advection'
               write(*,*) '  Please confirm subsidence 1d or 3d fields.'
+              write(*,*) '  Setting both doadvinic and doadvbg to false.'
               write(*,*) '********************************************************'
             end if
-            call task_abort()
+            !call task_abort()
+            doadvinic = .false.
+            doadvbg = .false.
           end if
         else if (doadvinic.and.doadvbg) then
           if (masterproc) then
